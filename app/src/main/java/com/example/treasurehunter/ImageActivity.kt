@@ -2,10 +2,14 @@ package com.example.treasurehunter
 
 import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.content.Intent.ACTION_GET_CONTENT
 import android.graphics.Bitmap
+import android.graphics.ImageDecoder
+import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.provider.MediaStore
+import android.util.Log
 import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.core.view.drawToBitmap
@@ -16,72 +20,102 @@ import kotlinx.android.synthetic.main.activity_image.*
 import java.io.IOException
 
 class ImageActivity : AppCompatActivity() {
+    private var answer = ""
+    private var stageIndex = 0
     private var angle = 0f
 
-    //取得返回的影像資料
     override fun onActivityResult(requestCode: Int,
                                   resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        //識別返回對象及執行結果
         if (requestCode == 0 && resultCode == RESULT_OK) {
-            val image = data?.extras?.get("data") ?: return //取得資料
-            val bitmap = image as Bitmap //將資料轉換成Bitmap
-            imageView.setImageBitmap(bitmap) //使用Bitmap設定圖像
-            recognizeImage(bitmap) //使用Bitmap進行辨識
+            val image = data?.extras?.get("data") ?: return
+            val bitmap = image as Bitmap
+            imageView.setImageBitmap(bitmap)
+            recognizeImage(bitmap)
+        } else if (requestCode == 1) {
+            val imageUri = data?.data ?: return
+
+            val bitmap = if (Build.VERSION.SDK_INT < 28) {
+                MediaStore.Images.Media.getBitmap(contentResolver, imageUri)
+            } else {
+                val source = ImageDecoder.createSource(this.contentResolver, imageUri)
+                ImageDecoder.decodeBitmap(source)
+            }
+
+            imageView.setImageBitmap(bitmap)
+            recognizeImage(bitmap)
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        setContentView(R.layout.activity_image)
+
+        intent.extras?.let {
+            answer = it.getString("Answer") ?: return
+            stageIndex = it.getInt("StageIndex")
+            tv_hint.text = it.getString("Hint")
+        }
 
         btn_photo.setOnClickListener {
-            //建立一個要進行影像獲取的Intent物件
             val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-            //用try-catch避免例外產生，若產生則顯示Toast
             try {
-                startActivityForResult(intent, 0) //發送Intent
+                startActivityForResult(intent, 0)
             } catch (e: ActivityNotFoundException) {
                 Toast.makeText(this,
-                    "此裝置無相機應用程式", Toast.LENGTH_SHORT).show()
+                    "No camera application", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        btn_choose.setOnClickListener {
+            val intent = Intent(ACTION_GET_CONTENT)
+            intent.type = "image/*"
+            try {
+                startActivityForResult(intent, 1)
+            } catch (e: ActivityNotFoundException) {
+                Toast.makeText(this,
+                    "No album application", Toast.LENGTH_SHORT).show()
             }
         }
 
         btn_rotate.setOnClickListener {
-            angle += 90f //原本角度再加上90度
-            imageView.rotation = angle //使ImageView旋轉
-            recognizeImage(imageView.drawToBitmap()) //取得Bitmap後進行辨識
+            angle += 90f
+            imageView.rotation = angle
+            recognizeImage(imageView.drawToBitmap())
         }
     }
 
-    //辨識圖像
     private fun recognizeImage(bitmap: Bitmap) {
         try {
-            //取得辨識標籤
             val labeler = ImageLabeling.getClient(
                 ImageLabelerOptions.DEFAULT_OPTIONS
             )
-            //建立InputImage物件
             val inputImage = InputImage.fromBitmap(bitmap, 0)
-            //匹配辨識標籤與圖像，並建立執行成功與失敗的監聽器
             labeler.process(inputImage)
                 .addOnSuccessListener { labels ->
-                    //取得辨識結果與可信度
                     val result = arrayListOf<String>()
                     for (label in labels) {
                         val text = label.text
                         val confidence = label.confidence
                         result.add("$text, 可信度：$confidence")
+
                     }
-                    //將結果顯示於ListView
-                    listView.adapter = ArrayAdapter(this,
-                        android.R.layout.simple_list_item_1,
-                        result
-                    )
+//                    listView.adapter = ArrayAdapter(this,
+//                        android.R.layout.simple_list_item_1,
+//                        result
+//                    )
+
+                    val isCorrect = labels.any { it.text.toLowerCase().contains(answer.toLowerCase()) }
+
+                    if (isCorrect) {
+                        val intent = Intent()
+                        intent.putExtra("NextStageIndex", stageIndex + 1)
+                        setResult(0, intent)
+                        finish()
+                    }
                 }
                 .addOnFailureListener { e ->
-                    Toast.makeText(this,
-                        "發生錯誤", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Error", Toast.LENGTH_SHORT).show()
                 }
         } catch (e: IOException) {
             e.printStackTrace()

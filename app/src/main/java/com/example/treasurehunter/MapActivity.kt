@@ -22,8 +22,9 @@ import kotlinx.android.synthetic.main.activity_map.*
 
 
 class MapActivity : AppCompatActivity(), OnMapReadyCallback {
+    private lateinit var mMap: GoogleMap
     private lateinit var mLocationRequest: LocationRequest
-    private lateinit var latLng: LatLng
+    private lateinit var userLatLng: LatLng
     private var stageIndex = 0
     private val stages = arrayListOf<Stage>()
 
@@ -35,11 +36,76 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
     class Stage(
         val latLng: LatLng,
         val title: String,
+        val hint: String,
         val answer: String
     )
 
+    //回傳權限要求後的結果
+    override fun onRequestPermissionsResult(requestCode: Int,
+                                            permissions: Array<String>,
+                                            grantResults: IntArray) {
+        if (grantResults.isNotEmpty() && requestCode == 0) {
+            for (result in grantResults)
+                if (result != PackageManager.PERMISSION_GRANTED)
+                    finish()
+            loadMap()
+        }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == 100 && resultCode == 0) {
+            data?.let {
+                stageIndex = it.getIntExtra("NextStageIndex", 0)
+                mMap.clear()
+                setStage()
+            }
+        }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_map)
+
+        stages.add(Stage(LatLng(25.033611, 121.565000), "台北101", "Can fly", "Bird"))
+        stages.add(Stage(LatLng(25.047924, 121.517081), "台北車站", "Four wheels", "Vehicle"))
+        stages.add(Stage(LatLng(25.043239, 121.534574), "北科紅樓", "Related to December", "Christmas"))
+
+        loadMap()
+    }
+
+    override fun onMapReady(map: GoogleMap) {
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                android.Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED &&
+            ActivityCompat.checkSelfPermission(
+                this,
+                android.Manifest.permission.ACCESS_COARSE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            ActivityCompat.requestPermissions(this,
+                arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION),
+                0)
+        } else {
+            mMap = map
+            map.isMyLocationEnabled = true
+            map.uiSettings.isMyLocationButtonEnabled = false
+
+            startLocationUpdates()
+            setListener()
+            setStage()
+        }
+    }
+
+    private fun loadMap() {
+        val mapFragment = supportFragmentManager.findFragmentById(R.id.mapFragment)
+                as SupportMapFragment
+        mapFragment.getMapAsync(this)
+    }
+
     @SuppressLint("MissingPermission")
-    private fun startLocationUpdates(map: GoogleMap) {
+    private fun startLocationUpdates() {
         mLocationRequest = LocationRequest().apply {
             priority = LocationRequest.PRIORITY_HIGH_ACCURACY
             interval = UPDATE_INTERVAL
@@ -61,106 +127,63 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
                     val location = locationResult.lastLocation
 
                     //第一關等取得使用者位置後才移動相機
-                    if (!::latLng.isInitialized) {
-                        val userLatLng = LatLng(location.latitude, location.longitude)
-                        cameraToNearestStation(map, stages[stageIndex].latLng, userLatLng)
+                    if (!::userLatLng.isInitialized) {
+                        userLatLng = LatLng(location.latitude, location.longitude)
+                        moveCameraToBetween(stages[stageIndex].latLng)
                     }
 
-                    latLng = LatLng(location.latitude, location.longitude)
-                    Log.e("latLng", "${latLng.latitude}, ${latLng.longitude}")
+                    userLatLng = LatLng(location.latitude, location.longitude)
+                    Log.e("latLng", "${userLatLng.latitude}, ${userLatLng.longitude}")
                 }
             },
             Looper.myLooper()
         )
     }
 
-    //回傳權限要求後的結果
-    override fun onRequestPermissionsResult(requestCode: Int,
-                                            permissions: Array<String>,
-                                            grantResults: IntArray) {
-        if (grantResults.isNotEmpty() && requestCode == 0) {
-            for (result in grantResults)
-                if (result != PackageManager.PERMISSION_GRANTED)
-                    finish()
-            loadMap()
-        }
-    }
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_map)
-
-        stages.add(Stage(LatLng(25.033611, 121.565000), "台北101", ""))
-        stages.add(Stage(LatLng(25.047924, 121.517081), "台北車站", ""))
-        stages.add(Stage(LatLng(25.026158, 121.542709), "台北科大", ""))
-
-        loadMap()
-    }
-
-    override fun onMapReady(map: GoogleMap) {
-        if (ActivityCompat.checkSelfPermission(
-                this,
-                android.Manifest.permission.ACCESS_FINE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED &&
-            ActivityCompat.checkSelfPermission(
-                this,
-                android.Manifest.permission.ACCESS_COARSE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            ActivityCompat.requestPermissions(this,
-                arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION),
-                0)
-        } else {
-            map.isMyLocationEnabled = true
-            map.uiSettings.isMyLocationButtonEnabled = false
-
-            startLocationUpdates(map)
-            setListener(map)
-            setStage(map)
-        }
-    }
-
-    private fun loadMap() {
-        val mapFragment = supportFragmentManager.findFragmentById(R.id.mapFragment)
-                as SupportMapFragment
-        mapFragment.getMapAsync(this)
-    }
-
-    private fun setListener(map: GoogleMap) {
+    private fun setListener() {
         img_location.setOnClickListener {
-            if (!::latLng.isInitialized)
+            if (!::userLatLng.isInitialized)
                 Toast.makeText(this, "Can not get your location", Toast.LENGTH_SHORT).show()
             else
-                map.animateCamera(
+                mMap.animateCamera(
                     CameraUpdateFactory.newLatLngZoom(
-                        LatLng(latLng.latitude, latLng.longitude), 13f
+                        LatLng(userLatLng.latitude, userLatLng.longitude), 13f
                     )
                 )
         }
 
         img_search.setOnClickListener {
-            val i = Intent(this, ImageActivity::class.java)
-            i.putExtra("Stage", stageIndex)
-            i.putExtra("Answer", stages[stageIndex].answer)
-            startActivity(i)
+            val currentStage = stageIndex + 1
+            val totalStage = stages.size
+
+            if (currentStage <= totalStage) {
+                val i = Intent(this, ImageActivity::class.java)
+                i.putExtra("StageIndex", stageIndex)
+                i.putExtra("Hint", stages[stageIndex].hint)
+                i.putExtra("Answer", stages[stageIndex].answer)
+                startActivityForResult(i, 100)
+            }
         }
     }
 
-    private fun setStage(map: GoogleMap) {
+    private fun setStage() {
         val currentStage = stageIndex + 1
         val totalStage = stages.size
 
-        if (currentStage > totalStage) {
+        if (currentStage > totalStage) { //取得寶藏
             tv_stage_title.visibility = View.GONE
-            tv_stage.text = "Go to get the treasure!"
+            tv_stage.visibility = View.GONE
+            tv_msg.visibility = View.VISIBLE
+            img_search.visibility = View.GONE
+            tv_search.visibility = View.GONE
 
             val marker = MarkerOptions()
             val location = LatLng(25.033303, 121.535844)
             marker.position(location)
-            marker.title("藏寶箱")
-            map.addMarker(marker)
+            marker.title("Treasure")
+            mMap.addMarker(marker)
 
-            cameraToNearestStation(map, location, latLng)
+            moveCameraToBetween(location)
         } else {
             tv_stage.text = "$currentStage/$totalStage"
 
@@ -169,22 +192,18 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
             marker.position(stage.latLng)
             marker.title(stage.title)
             marker.draggable(true)
-            map.addMarker(marker)
+            mMap.addMarker(marker)
+
+            //除第一關外更新相機位置
+            if (stageIndex != 0)
+                moveCameraToBetween(stage.latLng)
         }
-
-//        map.moveCamera(
-//            CameraUpdateFactory.newLatLngZoom(
-//                LatLng(25.035, 121.54), 13f
-//            )
-//        )
-
-
     }
 
-    private fun cameraToNearestStation(map: GoogleMap, station: LatLng, target: LatLng) {
+    private fun moveCameraToBetween(location: LatLng) {
         val bounds = LatLngBounds.Builder().run {
-            include(station)
-            include(target)
+            include(location)
+            include(userLatLng)
             build()
         }
 
@@ -196,7 +215,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
             (metrics.widthPixels * 0.2).toInt()
         )
 
-        map.moveCamera(cu)
-        map.moveCamera(CameraUpdateFactory.zoomTo(map.cameraPosition.zoom + 0.5f))
+        mMap.moveCamera(cu)
+        mMap.moveCamera(CameraUpdateFactory.zoomTo(mMap.cameraPosition.zoom + 0.5f))
     }
 }
