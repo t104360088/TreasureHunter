@@ -4,11 +4,13 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.recyclerview.widget.RecyclerView
 import com.airbnb.lottie.LottieAnimationView
 
 class Adapter(private val items: List<MainActivity.Item>) : RecyclerView.Adapter<Adapter.ViewHolder>() {
     class ViewHolder(v: View) : RecyclerView.ViewHolder(v) {
+        val cl = v.findViewById<ConstraintLayout>(R.id.cl)
         val tv_title = v.findViewById<TextView>(R.id.tv_title)
         val tv_text = v.findViewById<TextView>(R.id.tv_text)
         val view_anim = v.findViewById<LottieAnimationView>(R.id.view_anim)
@@ -25,9 +27,10 @@ class Adapter(private val items: List<MainActivity.Item>) : RecyclerView.Adapter
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         items.getOrNull(position)?.let {
+            holder.cl.setBackgroundResource(it.bgColor)
             holder.tv_title.text = it.title
             holder.tv_text.text = it.text
-            holder.view_anim.setAnimation(it.res)
+            holder.view_anim.setAnimation(it.anim)
         }
     }
 }

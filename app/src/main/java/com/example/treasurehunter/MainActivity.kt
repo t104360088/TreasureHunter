@@ -15,7 +15,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var adapter: Adapter
 
     class Item(
-        val res: Int,
+        val bgColor: Int,
+        val anim: Int,
         val title: String,
         val text: String
     )
@@ -29,12 +30,18 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setAdapter() {
-        val first = Item(R.raw.first,
+        val first = Item(R.color.yellow, R.raw.first,
             "Welcome to Treasure Hunter",
-            "Play the game to win the award and enjoy it!")
-        val second = Item(R.raw.second, "B", "B")
-        val third = Item(R.raw.third, "B", "B")
-        val fourth = Item(R.raw.fourth, "B", "B")
+            "Hi, you are a hunter looking for treasures,\nthis is a game tailored for you, enjoy it！")
+        val second = Item(R.color.green, R.raw.second,
+            "Go to destination",
+            "Reach the designated location based on the landmark")
+        val third = Item(R.color.orange, R.raw.third,
+            "Take pictures of the target",
+            "Follow the prompts to find the answer and take a photo, and enter the next stage after the correct answer")
+        val fourth = Item(R.color.purple, R.raw.fourth,
+            "Win the treasure",
+            "After completing the three stages, the map will show the location of the treasure")
         val items = arrayListOf(first, second, third, fourth)
 
         adapter = Adapter(items)

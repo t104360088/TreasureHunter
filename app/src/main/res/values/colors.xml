@@ -7,4 +7,9 @@
     <color name="colorTextSecondary">#757575</color>
     <color name="colorBackground">#FFFFFF</color>
     <color name="colorIndicatorInactive">#72BCF7</color>
+
+    <color name="yellow">#eee7c4</color>
+    <color name="green">#c4eee7</color>
+    <color name="orange">#FFAB91</color>
+    <color name="purple">#c4cbee</color>
 </resources>
