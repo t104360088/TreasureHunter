@@ -22,7 +22,6 @@ import java.io.IOException
 class ImageActivity : AppCompatActivity() {
     private var answer = ""
     private var stageIndex = 0
-    private var angle = 0f
 
     override fun onActivityResult(requestCode: Int,
                                   resultCode: Int, data: Intent?) {
@@ -76,12 +75,6 @@ class ImageActivity : AppCompatActivity() {
                 Toast.makeText(this,
                     "No album application", Toast.LENGTH_SHORT).show()
             }
-        }
-
-        btn_rotate.setOnClickListener {
-            angle += 90f
-            imageView.rotation = angle
-            recognizeImage(imageView.drawToBitmap())
         }
     }
 
