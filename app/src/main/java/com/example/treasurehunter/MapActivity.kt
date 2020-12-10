@@ -3,6 +3,8 @@ package com.example.treasurehunter
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.os.Looper
 import android.util.Log
@@ -15,6 +17,7 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
 import com.google.android.gms.maps.model.MarkerOptions
@@ -181,6 +184,11 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
             val location = LatLng(25.033303, 121.535844)
             marker.position(location)
             marker.title("Treasure")
+
+            val origin = BitmapFactory.decodeResource(this.resources, R.drawable.marker_treasure)
+            val scaled = Bitmap.createScaledBitmap(origin, 100, 100, false)
+
+            marker.icon(BitmapDescriptorFactory.fromBitmap(scaled))
             mMap.addMarker(marker)
 
             moveCameraToBetween(location)
@@ -191,7 +199,11 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
             val marker = MarkerOptions()
             marker.position(stage.latLng)
             marker.title(stage.title)
-            marker.draggable(true)
+
+            val origin = BitmapFactory.decodeResource(this.resources, R.drawable.marker_stage)
+            val scaled = Bitmap.createScaledBitmap(origin, 100, 100, false)
+
+            marker.icon(BitmapDescriptorFactory.fromBitmap(scaled))
             mMap.addMarker(marker)
 
             //除第一關外更新相機位置
