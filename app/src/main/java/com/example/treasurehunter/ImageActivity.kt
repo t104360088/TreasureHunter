@@ -101,10 +101,17 @@ class ImageActivity : AppCompatActivity() {
                     val isCorrect = labels.any { it.text.toLowerCase().contains(answer.toLowerCase()) }
 
                     if (isCorrect) {
-                        val intent = Intent()
-                        intent.putExtra("NextStageIndex", stageIndex + 1)
-                        setResult(0, intent)
-                        finish()
+                        val msg = "The answer is $answer"
+                        DialogManager.instance.showCorrectMsg(this, msg)?.setOnClickListener {
+                            DialogManager.instance.cancelDialog()
+
+                            val intent = Intent()
+                            intent.putExtra("NextStageIndex", stageIndex + 1)
+                            setResult(0, intent)
+                            finish()
+                        }
+                    } else {
+                        DialogManager.instance.showWrongMsg(this)
                     }
                 }
                 .addOnFailureListener { e ->
