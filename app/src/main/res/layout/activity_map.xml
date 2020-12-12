@@ -109,4 +109,17 @@
             app:layout_constraintTop_toBottomOf="@+id/img_location"/>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/cl_anim"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/gradient">
+
+        <com.airbnb.lottie.LottieAnimationView
+            android:id="@+id/view_anim"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            app:lottie_rawRes="@raw/timer" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,5 +1,6 @@
 package com.example.treasurehunter
 
+import android.animation.Animator
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -9,6 +10,7 @@ import android.os.Bundle
 import android.os.Looper
 import android.util.Log
 import android.view.View
+import android.view.animation.Animation
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -75,6 +77,23 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
         stages.add(Stage(LatLng(25.043239, 121.534574), "北科紅樓", "Related to December", "Christmas"))
 
         loadMap()
+
+        view_anim.addAnimatorListener(object : Animator.AnimatorListener {
+            override fun onAnimationRepeat(animation: Animator?) {
+            }
+
+            override fun onAnimationEnd(animation: Animator?) {
+                cl_anim?.visibility = View.GONE
+            }
+
+            override fun onAnimationCancel(animation: Animator?) {
+            }
+
+            override fun onAnimationStart(animation: Animator?) {
+            }
+        })
+
+        view_anim.playAnimation()
     }
 
     override fun onMapReady(map: GoogleMap) {
