@@ -6,10 +6,12 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.location.Location
 import android.os.Bundle
 import android.os.Looper
 import android.util.Log
 import android.view.View
+import android.view.animation.AlphaAnimation
 import android.view.animation.Animation
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -32,10 +34,12 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var userLatLng: LatLng
     private var stageIndex = 0
     private val stages = arrayListOf<Stage>()
+    private var distance = 0
 
     companion object {
         private const val UPDATE_INTERVAL: Long = 5000
         private const val FASTEST_INTERVAL: Long = 1000
+        private const val DISTANCE_LIMITE = 50
     }
 
     class Stage(
@@ -64,6 +68,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
                 stageIndex = it.getIntExtra("NextStageIndex", 0)
                 mMap.clear()
                 setStage()
+                doDistance()
             }
         }
     }
@@ -72,28 +77,12 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_map)
 
-        stages.add(Stage(LatLng(25.033611, 121.565000), "台北101", "Can fly", "Bird"))
-        stages.add(Stage(LatLng(25.047924, 121.517081), "台北車站", "Four wheels", "Vehicle"))
-        stages.add(Stage(LatLng(25.043239, 121.534574), "北科紅樓", "Related to December", "Christmas"))
+        stages.add(Stage(LatLng(25.043800, 121.534060), "第六教學大樓", "It's stupid but can fly", "Bird"))
+        stages.add(Stage(LatLng(25.043390, 121.533200), "土木館", "Travel a thousand miles a day", "Vehicle"))
+        stages.add(Stage(LatLng(25.043540, 121.535800), "中正館", "Related to December", "Christmas"))
 
         loadMap()
-
-        view_anim.addAnimatorListener(object : Animator.AnimatorListener {
-            override fun onAnimationRepeat(animation: Animator?) {
-            }
-
-            override fun onAnimationEnd(animation: Animator?) {
-                cl_anim?.visibility = View.GONE
-            }
-
-            override fun onAnimationCancel(animation: Animator?) {
-            }
-
-            override fun onAnimationStart(animation: Animator?) {
-            }
-        })
-
-        view_anim.playAnimation()
+        countdown()
     }
 
     override fun onMapReady(map: GoogleMap) {
@@ -118,6 +107,25 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
             setListener()
             setStage()
         }
+    }
+
+    private fun countdown() {
+        view_anim.addAnimatorListener(object : Animator.AnimatorListener {
+            override fun onAnimationRepeat(animation: Animator?) {
+            }
+
+            override fun onAnimationEnd(animation: Animator?) {
+                cl_anim?.visibility = View.GONE
+            }
+
+            override fun onAnimationCancel(animation: Animator?) {
+            }
+
+            override fun onAnimationStart(animation: Animator?) {
+            }
+        })
+
+        view_anim.playAnimation()
     }
 
     private fun loadMap() {
@@ -155,6 +163,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
                     }
 
                     userLatLng = LatLng(location.latitude, location.longitude)
+                    doDistance()
                     Log.e("latLng", "${userLatLng.latitude}, ${userLatLng.longitude}")
                 }
             },
@@ -169,7 +178,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
             else
                 mMap.animateCamera(
                     CameraUpdateFactory.newLatLngZoom(
-                        LatLng(userLatLng.latitude, userLatLng.longitude), 13f
+                        LatLng(userLatLng.latitude, userLatLng.longitude), 18f
                     )
                 )
         }
@@ -179,11 +188,16 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
             val totalStage = stages.size
 
             if (currentStage <= totalStage) {
-                val i = Intent(this, ImageActivity::class.java)
-                i.putExtra("StageIndex", stageIndex)
-                i.putExtra("Hint", stages[stageIndex].hint)
-                i.putExtra("Answer", stages[stageIndex].answer)
-                startActivityForResult(i, 100)
+                if (distance <= DISTANCE_LIMITE) {
+                    val i = Intent(this, ImageActivity::class.java)
+                    i.putExtra("StageIndex", stageIndex)
+                    i.putExtra("Hint", stages[stageIndex].hint)
+                    i.putExtra("Answer", stages[stageIndex].answer)
+                    startActivityForResult(i, 100)
+                } else {
+                    val msg = "The prompt will be unlocked within $DISTANCE_LIMITE meters from the stage, your current distance is $distance meters"
+                    DialogManager.instance.showMessage(this, msg)
+                }
             }
         }
     }
@@ -200,7 +214,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
             tv_search.visibility = View.GONE
 
             val marker = MarkerOptions()
-            val location = LatLng(25.033303, 121.535844)
+            val location = LatLng(25.043239, 121.534574)
             marker.position(location)
             marker.title("Treasure")
 
@@ -247,6 +261,33 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
         )
 
         mMap.moveCamera(cu)
-        mMap.moveCamera(CameraUpdateFactory.zoomTo(mMap.cameraPosition.zoom + 0.5f))
+        mMap.moveCamera(CameraUpdateFactory.zoomTo(mMap.cameraPosition.zoom - 0.5f))
+    }
+
+    private fun doDistance() {
+        val currentStage = stageIndex + 1
+        val totalStage = stages.size
+
+        if (currentStage <= totalStage) {
+            val destination = stages[stageIndex].latLng
+            val result = FloatArray(1)
+            Location.distanceBetween(userLatLng.latitude, userLatLng.longitude, destination.latitude, destination.longitude, result)
+            distance = result[0].toInt()
+            img_search.alphaAnimation(distance <= DISTANCE_LIMITE)
+        } else
+            img_search.alphaAnimation(false)
+    }
+
+    private fun View?.alphaAnimation(show: Boolean, alphaStart: Float = 1.0f,
+                             alphaEnd: Float = 0.1f, duration: Long = 1000) {
+        this?.clearAnimation()
+        if (show) {
+            val alpha = AlphaAnimation(alphaStart, alphaEnd)
+            alpha.duration = duration
+            alpha.repeatCount = Animation.INFINITE
+            alpha.repeatMode = Animation.REVERSE
+            this?.animation = alpha
+            alpha.start()
+        }
     }
 }
