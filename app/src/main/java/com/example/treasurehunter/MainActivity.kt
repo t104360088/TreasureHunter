@@ -32,7 +32,7 @@ class MainActivity : AppCompatActivity() {
     private fun setAdapter() {
         val first = Item(R.color.yellow, R.raw.first,
             "Welcome to Treasure Hunter",
-            "Hi, you are a hunter looking for treasures,\nthis is a game tailored for you, enjoy it！")
+            "Hi, you are a hunter looking for treasures.\nThis is a game tailored for you, enjoy it！")
         val second = Item(R.color.green, R.raw.second,
             "Go to destination",
             "Reach the designated location based on the landmark")
